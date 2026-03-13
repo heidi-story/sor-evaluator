@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Science of Reading AI Response Evaluator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e8f1f7 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2c5aa0 0%, #4a7bc8 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            font-size: 16px;
+            opacity: 0.95;
+        }
+
+        main {
+            padding: 30px;
+        }
+
+        .api-key-section {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .api-key-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #2c5aa0;
+        }
+
+        .api-key-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #apiKey {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .toggle-key-btn {
+            padding: 8px 14px;
+            background: #2c5aa0;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .toggle-key-btn:hover {
+            background: #1e3f5a;
+        }
+
+        .api-key-note {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        .input-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .input-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2c5aa0;
+            font-size: 14px;
+        }
+
+        textarea {
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 200px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #2c5aa0;
+            box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .evaluate-btn {
+            background: #2c5aa0;
+            color: white;
+            flex: 1;
+        }
+
+        .evaluate-btn:hover {
+            background: #1e3f5a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(44, 90, 160, 0.3);
+        }
+
+        .evaluate-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .example-btn {
+            background: #e8f1f7;
+            color: #2c5aa0;
+            border: 1px solid #2c5aa0;
+        }
+
+        .example-btn:hover {
+            background: #d0dce9;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            color: #2c5aa0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2c5aa0;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+            gap: 5px;
+        }
+
+        .tab-btn {
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            font-size: 15px;
+        }
+
+        .tab-btn.active {
+            color: #2c5aa0;
+            border-bottom-color: #2c5aa0;
+        }
+
+        .tab-btn:hover {
+            color: #2c5aa0;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .summary-box {
+            background: #f0f4f8;
+            border-left: 4px solid #2c5aa0;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .summary-text {
+            margin-bottom: 15px;
+            line-height: 1.7;
+        }
+
+        .rating-box {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .rating-item {
+            flex: 1;
+        }
+
+        .rating-label {
+            font-weight: 600;
+            color: #666;
+            font-size: 13px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .rating-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2c5aa0;
+        }
+
+        .domain-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .domain-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f9f9f9;
+        }
+
+        .domain-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .domain-name {
+            font-weight: 600;
+            color: #2c5aa0;
+        }
+
+        .domain-code {
+            font-size: 12px;
+            color: #999;
+            font-family: 'Courier New', monospace;
+        }
+
+        .score-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .score-0 {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .score-1 {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .score-2 {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .score-legend {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .domain-evidence {
+            font-size: 13px;
+            color: #555;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e0e0e0;
+            font-style: italic;
+        }
+
+        .accuracy-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .accuracy-ac {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .accuracy-pa {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .accuracy-mi {
+            background: #fed7aa;
+            color: #d97706;
+        }
+
+        .accuracy-dp {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .accuracy-explanation {
+            background: #f9f9f9;
+            border-left: 4px solid #2c5aa0;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .action-codes {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .action-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .action-tag.present {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .action-tag.absent {
+            background: #f3f4f6;
+            color: #999;
+        }
+
+        .action-code {
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+        }
+
+        .action-evidence {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            padding: 8px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            border-left: 2px solid #2c5aa0;
+        }
+
+        .absent-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .absent-section h4 {
+            color: #dc2626;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .absent-item {
+            background: #fef2f2;
+            padding: 10px 12px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            border-left: 3px solid #dc2626;
+        }
+
+        .suggestions-box {
+            background: #dbeafe;
+            border-left: 4px solid #2c5aa0;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .suggestions-title {
+            font-weight: 600;
+            color: #0c4a6e;
+            margin-bottom: 10px;
+        }
+
+        .suggestion-list {
+            list-style: none;
+        }
+
+        .suggestion-list li {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+            color: #0c4a6e;
+            font-size: 14px;
+        }
+
+        .suggestion-list li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #2c5aa0;
+            font-weight: 700;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .export-btn {
+            padding: 10px 16px;
+            background: #e8f1f7;
+            color: #2c5aa0;
+            border: 1px solid #2c5aa0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .export-btn:hover {
+            background: #d0dce9;
+        }
+
+        .copy-feedback {
+            display: none;
+            margin-top: 10px;
+            color: #16a34a;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .copy-feedback.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 22px;
+            }
+
+            main {
+                padding: 20px;
+            }
+
+            .domain-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+
+            .tab-btn {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Science of Reading AI Response Evaluator</h1>
+            <p>Evaluate AI-generated literacy instruction responses against evidence-based frameworks</p>
+        </header>
+
+        <main>
+            <!-- API Key Section -->
+            <div class="api-key-section">
+                <div class="api-key-label">
+                    🔑 Anthropic API Key
+                </div>
+                <div class="api-key-input-wrapper">
+                    <input type="password" id="apiKey" placeholder="sk-ant-..." />
+                    <button class="toggle-key-btn" onclick="toggleApiKeyVisibility()">Show</button>
+                </div>
+                <div class="api-key-note">
+                    Your API key is only stored in your browser session and is sent directly to Anthropic's API. It is never stored permanently or sent anywhere else.
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div id="errorMessage" class="error" style="display: none;"></div>
+
+            <!-- Input Section -->
+            <div class="input-section">
+                <div class="form-group">
+                    <label for="originalPrompt">Original Prompt (Optional)</label>
+                    <textarea id="originalPrompt" placeholder="What was asked of the AI? Paste the original prompt here..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="aiResponse">AI Response (Required)</label>
+                    <textarea id="aiResponse" placeholder="Paste the AI-generated literacy instruction response here..."></textarea>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="button-group">
+                <button class="evaluate-btn" onclick="evaluateResponse()" id="evaluateBtn">Evaluate Response</button>
+                <button class="example-btn" onclick="loadExample()">Try Example</button>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Evaluating response...</p>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection">
+                <div class="tabs" id="tabsList">
+                    <button class="tab-btn active" onclick="switchTab('summary')">Overall Summary</button>
+                    <button class="tab-btn" onclick="switchTab('codebook1')">SOR Domain Scores</button>
+                    <button class="tab-btn" onclick="switchTab('accuracy')">Accuracy Classification</button>
+                    <button class="tab-btn" onclick="switchTab('codebook2')">Instructional Actions</button>
+                    <button class="tab-btn" onclick="switchTab('suggestions')">Improvement Suggestions</button>
+                </div>
+
+                <!-- Summary Tab -->
+                <div class="tab-content active" id="summary">
+                    <div class="summary-box">
+                        <div class="summary-text" id="summaryText"></div>
+                        <div class="rating-box">
+                            <div class="rating-item">
+                                <div class="rating-label">Overall SOR Rating</div>
+                                <div class="rating-value" id="overallRating"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CodeBook 1 Tab -->
+                <div class="tab-content" id="codebook1">
+                    <h3 style="margin-bottom: 15px; color: #2c5aa0;">Science of Reading Domain Scores</h3>
+                    <div class="domain-grid" id="domainGrid"></div>
+                </div>
+
+                <!-- Accuracy Tab -->
+                <div class="tab-content" id="accuracy">
+                    <h3 style="margin-bottom: 15px; color: #2c5aa0;">Accuracy Classification</h3>
+                    <div id="accuracyContent"></div>
+                </div>
+
+                <!-- CodeBook 2 Tab -->
+                <div class="tab-content" id="codebook2">
+                    <h3 style="margin-bottom: 15px; color: #2c5aa0;">Instructional Action Codes Detected</h3>
+                    <div class="action-codes" id="actionCodesContainer"></div>
+                    <div id="absentCodesContainer"></div>
+                </div>
+
+                <!-- Suggestions Tab -->
+                <div class="tab-content" id="suggestions">
+                    <div id="suggestionsContent"></div>
+                </div>
+
+                <!-- Export Buttons -->
+                <div class="export-buttons">
+                    <button class="export-btn" onclick="copyToClipboard()">Copy Results</button>
+                    <button class="export-btn" onclick="downloadReport()">Download Report</button>
+                </div>
+                <div class="copy-feedback" id="copyFeedback">Copied to clipboard!</div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // System prompt for Claude
+        const SYSTEM_PROMPT = `You are an expert literacy researcher evaluating an AI-generated instructional response using two research-based coding frameworks. Analyze the provided text carefully and return a JSON evaluation.
+
+## CodeBook 1: Science of Reading Evaluation Coding Framework
+
+Score each domain 0–2:
+- 0 = Not evident
+- 1 = Partial
+- 2 = Fully evident
+
+Domains:
+- IDE (Explicit Instruction): Teacher modeling, think-alouds, I Do–We Do–You Do, guided practice, corrective feedback
+- SYS (Systematic & Cumulative): Logical skill progression, cumulative review, scaffolded instruction
+- DRI (Diagnostic & Responsive): Formative checks, exit tickets, error analysis, reteach prompts
+- ME (Multisensory Engagement): Visual + auditory + kinesthetic/tactile learning
+- PA (Phonological Awareness): Blending, segmenting, rhyming, phoneme manipulation
+- PAP (Phonics & Decoding): Explicit sound–spelling teaching, blending routines, decodable reading
+- OS (Orthography & Spelling): Syllable types, spelling patterns, dictation
+- F (Fluency): Modeled reading, repeated reading, prosody practice
+- V (Vocabulary): Tier 2 words, student-friendly definitions, contextual use
+- C (Comprehension): Questioning, summarizing, text discussion
+- WE (Writing & Encoding): Dictation, spelling aligned with phonics, sentence writing
+- EA (Equity & Access): EL supports, dyslexia support, culturally responsive examples
+
+Accuracy Classification (choose one):
+- AC (Accurate): Correctly applies evidence-based literacy concepts
+- PA (Partially Accurate): References correct concept but incomplete or vague
+- MI (Misapplied): Incorrectly explains or applies a literacy concept
+- DP (Debunked Practice): Includes practices inconsistent with SOR research (e.g., three-cueing, guessing from pictures)
+
+## CodeBook 2: Descriptive Coding of Instructional Actions
+
+Identify which codes are present:
+OBJ (Learning Objective), MAT (Instructional Materials), MOD (Teacher Modeling), GUI (Guided Practice), IND (Independent Practice), MSA (Multisensory Activity), DEC (Decoding Practice), SEG (Phoneme Segmentation), BLD (Phoneme Blending), ENC (Encoding/Spelling), FLU (Fluency Practice), VOC (Vocabulary Instruction), COM (Comprehension Strategy), ASS (Assessment/Check for Understanding), ERR (Error Correction/Feedback), DIFF (Differentiation/Support), STR (Reading Strategy Instruction), WKS (Worksheet Practice), CTX (Context-Based Word Solving)
+
+## Response Format
+
+Return ONLY valid JSON with this structure (no markdown, no code blocks, just pure JSON):
+{
+  "summary": "Brief narrative overview of the evaluation (2-3 sentences)",
+  "overall_sor_rating": "Strong/Moderate/Weak/Misaligned",
+  "codebook1": {
+    "domains": {
+      "IDE": {"score": 0-2, "evidence": "..."},
+      "SYS": {"score": 0-2, "evidence": "..."},
+      "DRI": {"score": 0-2, "evidence": "..."},
+      "ME": {"score": 0-2, "evidence": "..."},
+      "PA": {"score": 0-2, "evidence": "..."},
+      "PAP": {"score": 0-2, "evidence": "..."},
+      "OS": {"score": 0-2, "evidence": "..."},
+      "F": {"score": 0-2, "evidence": "..."},
+      "V": {"score": 0-2, "evidence": "..."},
+      "C": {"score": 0-2, "evidence": "..."},
+      "WE": {"score": 0-2, "evidence": "..."},
+      "EA": {"score": 0-2, "evidence": "..."}
+    },
+    "accuracy": {
+      "classification": "AC|PA|MI|DP",
+      "label": "Accurate|Partially Accurate|Misapplied|Debunked Practice",
+      "explanation": "..."
+    }
+  },
+  "codebook2": {
+    "present": [
+      {"code": "MOD", "name": "Teacher Modeling", "evidence": "..."},
+      {"code": "GUI", "name": "Guided Practice", "evidence": "..."}
+    ],
+    "absent_notable": [
+      {"code": "ASS", "name": "Assessment/Check for Understanding", "reason": "why this absence matters"}
+    ]
+  },
+  "suggestions": {
+    "for_prompt": ["suggestion 1", "suggestion 2"],
+    "for_response": ["suggestion 1", "suggestion 2"]
+  }
+}`;
+
+        const DOMAIN_NAMES = {
+            IDE: { name: "Explicit Instruction", full: "Teacher modeling, think-alouds, I Do–We Do–You Do" },
+            SYS: { name: "Systematic & Cumulative", full: "Logical progression, cumulative review, scaffolding" },
+            DRI: { name: "Diagnostic & Responsive", full: "Formative checks, exit tickets, error analysis" },
+            ME: { name: "Multisensory Engagement", full: "Visual + auditory + kinesthetic learning" },
+            PA: { name: "Phonological Awareness", full: "Blending, segmenting, rhyming, phoneme manipulation" },
+            PAP: { name: "Phonics & Decoding", full: "Sound–spelling, blending routines, decodable text" },
+            OS: { name: "Orthography & Spelling", full: "Syllable types, spelling patterns, dictation" },
+            F: { name: "Fluency", full: "Modeled reading, repeated reading, prosody practice" },
+            V: { name: "Vocabulary", full: "Tier 2 words, student-friendly definitions, context" },
+            C: { name: "Comprehension", full: "Questioning, summarizing, text discussion" },
+            WE: { name: "Writing & Encoding", full: "Dictation, spelling-phonics alignment, sentence writing" },
+            EA: { name: "Equity & Access", full: "EL supports, dyslexia support, cultural responsiveness" }
+        };
+
+        const ACTION_CODE_NAMES = {
+            OBJ: "Learning Objective",
+            MAT: "Instructional Materials",
+            MOD: "Teacher Modeling",
+            GUI: "Guided Practice",
+            IND: "Independent Practice",
+            MSA: "Multisensory Activity",
+            DEC: "Decoding Practice",
+            SEG: "Phoneme Segmentation",
+            BLD: "Phoneme Blending",
+            ENC: "Encoding/Spelling",
+            FLU: "Fluency Practice",
+            VOC: "Vocabulary Instruction",
+            COM: "Comprehension Strategy",
+            ASS: "Assessment/Check for Understanding",
+            ERR: "Error Correction/Feedback",
+            DIFF: "Differentiation/Support",
+            STR: "Reading Strategy Instruction",
+            WKS: "Worksheet Practice",
+            CTX: "Context-Based Word Solving"
+        };
+
+        const EXAMPLE_PROMPT = "Create a phonics lesson for second graders learning the 'oa' vowel team, including phoneme segmentation practice and a decodable story.";
+
+        const EXAMPLE_RESPONSE = `Here's a phonics lesson for teaching the 'oa' vowel team:
+
+1. Warm-up (5 min): Review previous vowel teams and introduce 'oa' as a team that makes the long 'o' sound.
+
+2. Sound Awareness (10 min):
+   - Say words with 'oa': boat, coat, toast, goal
+   - Have students repeat after you and clap when they hear the 'oa' sound
+   - Show picture cards and ask students to identify the 'oa' words
+
+3. Letter-Sound Correspondence (10 min):
+   - Write 'oa' on the board and say the sound together
+   - Show how 'o' and 'a' work together as a team
+   - Use hand motions to represent the letters coming together
+
+4. Blending Practice (10 min):
+   - Model blending: "Watch me blend. O-A says /ō/. Now the word: b-oat. Boat!"
+   - Have students blend with you (We Do)
+   - Give word cards with 'oa' words for students to blend independently
+
+5. Decodable Story (10 min):
+   - Read a story: "Toad's Boat"
+   - Track with finger as we read
+   - Have students follow along in their own books
+
+6. Assessment:
+   - Ask students to write 3 'oa' words on a whiteboard
+   - Observe their blending accuracy
+
+Materials needed: Word cards, picture cards, decodable reader, whiteboards`;
+
+        function toggleApiKeyVisibility() {
+            const input = document.getElementById('apiKey');
+            const btn = event.target;
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = 'Hide';
+            } else {
+                input.type = 'password';
+                btn.textContent = 'Show';
+            }
+        }
+
+        function loadExample() {
+            document.getElementById('originalPrompt').value = EXAMPLE_PROMPT;
+            document.getElementById('aiResponse').value = EXAMPLE_RESPONSE;
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        async function evaluateResponse() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const originalPrompt = document.getElementById('originalPrompt').value.trim();
+            const aiResponse = document.getElementById('aiResponse').value.trim();
+            const errorMessage = document.getElementById('errorMessage');
+
+            errorMessage.style.display = 'none';
+
+            if (!apiKey) {
+                showError('Please enter your Anthropic API key');
+                return;
+            }
+
+            if (!aiResponse) {
+                showError('Please paste an AI response to evaluate');
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('resultsSection').classList.remove('show');
+            document.getElementById('evaluateBtn').disabled = true;
+
+            try {
+                const userMessage = `${originalPrompt ? `Original Prompt:\n${originalPrompt}\n\n` : ''}AI Response to Evaluate:\n${aiResponse}`;
+
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': apiKey,
+                        'content-type': 'application/json',
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-5-20250514',
+                        max_tokens: 4096,
+                        system: SYSTEM_PROMPT,
+                        messages: [
+                            { role: 'user', content: userMessage }
+                        ]
+                    })
+                });
+
+                document.getElementById('loading').style.display = 'none';
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    if (response.status === 401) {
+                        showError('Invalid API key. Please check your Anthropic API key.');
+                    } else if (response.status === 429) {
+                        showError('Rate limit exceeded. Please wait a moment and try again.');
+                    } else {
+                        showError(`API Error: ${errorData.error?.message || 'Unknown error'}`);
+                    }
+                    document.getElementById('evaluateBtn').disabled = false;
+                    return;
+                }
+
+                const data = await response.json();
+                const content = data.content[0].text;
+
+                // Parse JSON response, handling markdown code fences
+                let jsonText = content;
+                if (jsonText.includes('```json')) {
+                    jsonText = jsonText.split('```json')[1].split('```')[0].trim();
+                } else if (jsonText.includes('```')) {
+                    jsonText = jsonText.split('```')[1].split('```')[0].trim();
+                }
+
+                const evaluation = JSON.parse(jsonText);
+                displayResults(evaluation);
+                document.getElementById('resultsSection').classList.add('show');
+
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                if (error instanceof SyntaxError) {
+                    showError('Failed to parse API response. Please try again.');
+                } else {
+                    showError(`Error: ${error.message}`);
+                }
+            } finally {
+                document.getElementById('evaluateBtn').disabled = false;
+            }
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+
+        function displayResults(evaluation) {
+            // Summary
+            document.getElementById('summaryText').textContent = evaluation.summary;
+            document.getElementById('overallRating').textContent = evaluation.overall_sor_rating;
+
+            // Domain Scores
+            const domainGrid = document.getElementById('domainGrid');
+            domainGrid.innerHTML = '';
+            Object.entries(evaluation.codebook1.domains).forEach(([code, data]) => {
+                const domain = DOMAIN_NAMES[code];
+                const card = document.createElement('div');
+                card.className = 'domain-card';
+                card.innerHTML = `
+                    <div class="domain-header">
+                        <div>
+                            <div class="domain-name">${domain.name}</div>
+                            <div class="domain-code">${code}</div>
+                        </div>
+                        <div class="score-badge score-${data.score}">${data.score}</div>
+                    </div>
+                    <div class="score-legend">
+                        0 = Not evident | 1 = Partial | 2 = Fully evident
+                    </div>
+                    <div class="domain-evidence">${data.evidence}</div>
+                `;
+                domainGrid.appendChild(card);
+            });
+
+            // Accuracy
+            const accuracy = evaluation.codebook1.accuracy;
+            const accuracyClass = `accuracy-${accuracy.classification.toLowerCase()}`;
+            document.getElementById('accuracyContent').innerHTML = `
+                <div class="accuracy-badge ${accuracyClass}">${accuracy.label}</div>
+                <div class="accuracy-explanation">
+                    <strong>Why:</strong> ${accuracy.explanation}
+                </div>
+            `;
+
+            // Action Codes
+            const actionCodesContainer = document.getElementById('actionCodesContainer');
+            actionCodesContainer.innerHTML = '';
+            const allCodes = Object.keys(ACTION_CODE_NAMES);
+            const presentCodes = evaluation.codebook2.present.map(p => p.code);
+
+            evaluation.codebook2.present.forEach(code => {
+                const tag = document.createElement('div');
+                tag.className = 'action-tag present';
+                tag.innerHTML = `
+                    <span class="action-code">${code.code}</span>
+                    <span>${code.name}</span>
+                    ${code.evidence ? `<div class="action-evidence">${code.evidence}</div>` : ''}
+                `;
+                actionCodesContainer.appendChild(tag);
+            });
+
+            // Absent Notable
+            const absentContainer = document.getElementById('absentCodesContainer');
+            if (evaluation.codebook2.absent_notable && evaluation.codebook2.absent_notable.length > 0) {
+                let html = '<div class="absent-section"><h4>⚠️ Notable Absences</h4>';
+                evaluation.codebook2.absent_notable.forEach(code => {
+                    html += `<div class="absent-item"><strong>${code.code} — ${code.name}:</strong> ${code.reason}</div>`;
+                });
+                html += '</div>';
+                absentContainer.innerHTML = html;
+            } else {
+                absentContainer.innerHTML = '';
+            }
+
+            // Suggestions
+            let suggestionsHTML = '';
+
+            if (evaluation.suggestions.for_prompt && evaluation.suggestions.for_prompt.length > 0) {
+                suggestionsHTML += `
+                    <div class="suggestions-box">
+                        <div class="suggestions-title">Suggestions for the Prompt</div>
+                        <ul class="suggestion-list">
+                            ${evaluation.suggestions.for_prompt.map(s => `<li>${s}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            if (evaluation.suggestions.for_response && evaluation.suggestions.for_response.length > 0) {
+                suggestionsHTML += `
+                    <div class="suggestions-box">
+                        <div class="suggestions-title">Suggestions for the Response</div>
+                        <ul class="suggestion-list">
+                            ${evaluation.suggestions.for_response.map(s => `<li>${s}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            document.getElementById('suggestionsContent').innerHTML = suggestionsHTML;
+        }
+
+        function switchTab(tabName) {
+            // Hide all content
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Remove active from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected content
+            document.getElementById(tabName).classList.add('active');
+
+            // Mark button as active
+            event.target.classList.add('active');
+        }
+
+        function copyToClipboard() {
+            const prompt = document.getElementById('originalPrompt').value;
+            const response = document.getElementById('aiResponse').value;
+            const summary = document.getElementById('summaryText').textContent;
+            const rating = document.getElementById('overallRating').textContent;
+
+            const text = `Science of Reading AI Response Evaluation
+
+Original Prompt:
+${prompt || '(None provided)'}
+
+AI Response:
+${response}
+
+EVALUATION RESULTS
+==================
+
+Overall Summary:
+${summary}
+
+Overall SOR Rating: ${rating}
+
+For complete details, see the full evaluation in the app.`;
+
+            navigator.clipboard.writeText(text).then(() => {
+                const feedback = document.getElementById('copyFeedback');
+                feedback.classList.add('show');
+                setTimeout(() => feedback.classList.remove('show'), 2000);
+            });
+        }
+
+        function downloadReport() {
+            const prompt = document.getElementById('originalPrompt').value;
+            const response = document.getElementById('aiResponse').value;
+            const summary = document.getElementById('summaryText').textContent;
+            const rating = document.getElementById('overallRating').textContent;
+
+            const timestamp = new Date().toLocaleString();
+
+            const reportContent = `Science of Reading AI Response Evaluation Report
+Generated: ${timestamp}
+
+ORIGINAL PROMPT:
+${prompt || '(None provided)'}
+
+AI RESPONSE:
+${response}
+
+EVALUATION RESULTS:
+==================
+
+Overall Summary:
+${summary}
+
+Overall SOR Rating: ${rating}
+
+This report was generated using the Science of Reading AI Response Evaluator.`;
+
+            const blob = new Blob([reportContent], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sor-evaluation-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+
+        // Store API key in session storage
+        document.getElementById('apiKey').addEventListener('change', () => {
+            sessionStorage.setItem('sorApiKey', document.getElementById('apiKey').value);
+        });
+
+        // Load API key from session storage on page load
+        window.addEventListener('load', () => {
+            const savedKey = sessionStorage.getItem('sorApiKey');
+            if (savedKey) {
+                document.getElementById('apiKey').value = savedKey;
+            }
+        });
+    </script>
+</body>
+</html>
